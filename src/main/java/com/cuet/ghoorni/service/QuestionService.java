@@ -28,8 +28,13 @@ public class QuestionService {
         question.setUpdatedAt(LocalDateTime.now());
         return questionRepository.save(question);
     }
-    
+
     public List<Question> findAllQuestions() {
         return questionRepository.findAll();
+    }
+
+    public Question findQuestionById(Long questionId) {
+        return questionRepository.findById(questionId)
+                .orElseThrow(() -> new RuntimeException("Question not found with id: " + questionId));
     }
 }
