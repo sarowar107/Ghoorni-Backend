@@ -31,3 +31,23 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Railway ###
+.railway/
+
+### Application Logs ###
+*.log
+logs/
+
+### Environment Files ###
+.env
+.env.local
+.env.production
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Uploads (for local development) ###
+resources/uploads/*
+!resources/uploads/.gitkeep
