@@ -25,12 +25,15 @@ public class User {
     private List<Notice> notices;
 
     @OneToMany(mappedBy = "uploadedBy", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Files> files;
 
     @OneToMany(mappedBy = "askedBy", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Question> questions;
 
     @OneToMany(mappedBy = "answeredBy", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Answer> answers;
 
     // Getters and setters from Lombok @Data

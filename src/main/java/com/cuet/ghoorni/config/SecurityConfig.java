@@ -67,6 +67,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/files/upload").authenticated() // Only authenticated
                                                                                                // users can upload files
                         .requestMatchers("/api/user/**").authenticated() // Require authentication for user endpoints
+                        .requestMatchers("/api/admin/**").authenticated() // Require authentication for admin endpoints
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
