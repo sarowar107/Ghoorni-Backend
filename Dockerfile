@@ -6,8 +6,8 @@ COPY pom.xml .
 COPY src src
 COPY entrypoint.sh .
 
-# Use dos2unix to convert line endings from CRLF to LF
-RUN apk add --no-cache dos2unix
+# Add netcat and dos2unix
+RUN apk add --no-cache netcat dos2unix
 RUN dos2unix entrypoint.sh
 
 RUN chmod +x mvnw && ./mvnw clean package -DskipTests
