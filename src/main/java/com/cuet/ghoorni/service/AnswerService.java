@@ -43,4 +43,19 @@ public class AnswerService {
     public List<Answer> findAnswersByQuestionId(Long questionId) {
         return answerRepository.findByQuestionQuestionId(questionId);
     }
+
+    public void deleteAnswer(Long answerId, String userId) {
+        Answer answer = answerRepository.findById(answerId)
+                .orElseThrow(() -> new RuntimeException("Answer not found"));
+
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check if the user is the answer creator or an admin
+        if (!answer.getAnsweredBy().getUserId().equals(userId) && !user.getRole().equals("admin")) {
+            throw new RuntimeException("You don't have permission to delete this answer");
+        }
+
+        answerRepository.delete(answer);
+    }
 }

@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.util.List; // Import the List class
 
 @Service
 public class FileService {
@@ -63,5 +64,30 @@ public class FileService {
         } else {
             throw new RuntimeException("File not found " + fileEntity.getContent());
         }
+    }
+
+    // New method to get all file metadata
+    public List<com.cuet.ghoorni.model.Files> getAllFiles() {
+        return fileRepository.findAll();
+    }
+
+    public void deleteFile(Long fileId, String userId) throws IOException {
+        com.cuet.ghoorni.model.Files file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("File not found with id: " + fileId));
+
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User not found!"));
+
+        // Check if the user is the uploader or an admin
+        if (!file.getUploadedBy().getUserId().equals(userId) && !user.getRole().equals("admin")) {
+            throw new RuntimeException("You don't have permission to delete this file");
+        }
+
+        // Delete the physical file
+        Path filePath = this.fileStorageLocation.resolve(file.getContent()).normalize();
+        java.nio.file.Files.deleteIfExists(filePath);
+
+        // Delete the database record
+        fileRepository.delete(file);
     }
 }

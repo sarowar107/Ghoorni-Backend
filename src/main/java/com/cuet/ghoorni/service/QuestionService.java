@@ -37,4 +37,19 @@ public class QuestionService {
         return questionRepository.findById(questionId)
                 .orElseThrow(() -> new RuntimeException("Question not found with id: " + questionId));
     }
+
+    public void deleteQuestion(Long questionId, String userId) {
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new RuntimeException("Question not found with id: " + questionId));
+
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User not found!"));
+
+        // Check if the user is the creator or an admin
+        if (!question.getAskedBy().getUserId().equals(userId) && !user.getRole().equals("admin")) {
+            throw new RuntimeException("You don't have permission to delete this question");
+        }
+
+        questionRepository.delete(question);
+    }
 }

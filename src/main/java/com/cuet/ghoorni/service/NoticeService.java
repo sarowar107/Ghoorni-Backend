@@ -37,4 +37,19 @@ public class NoticeService {
         return noticeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Notice not found with id: " + id));
     }
+
+    public void deleteNotice(Long id, String userId) {
+        Notice notice = noticeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Notice not found with id: " + id));
+
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User not found!"));
+
+        // Check if the user is the creator or an admin
+        if (!notice.getCreatedBy().getUserId().equals(userId) && !user.getRole().equals("admin")) {
+            throw new RuntimeException("You don't have permission to delete this notice");
+        }
+
+        noticeRepository.delete(notice);
+    }
 }

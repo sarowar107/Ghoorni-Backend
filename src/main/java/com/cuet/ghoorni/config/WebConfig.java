@@ -10,7 +10,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:5174", "http://localhost:5173", "https://ghoornifrontend.netlify.app") // Frontend URLs
+                .allowedOrigins("http://localhost:5174", "http://localhost:5173", "https://ghoornifrontend.netlify.app", "https://ghoorni.netlify.app") // Frontend URLs
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)

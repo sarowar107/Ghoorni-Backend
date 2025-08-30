@@ -34,4 +34,18 @@ public class AnswerController {
                 .collect(Collectors.toList());
         return new ResponseEntity<>(responses, HttpStatus.OK);
     }
+
+    @DeleteMapping("/{answerId}")
+    public ResponseEntity<?> deleteAnswer(@PathVariable Long answerId, Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+        }
+
+        try {
+            answerService.deleteAnswer(answerId, authentication.getName());
+            return ResponseEntity.ok().body("Answer deleted successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        }
+    }
 }

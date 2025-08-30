@@ -3,6 +3,7 @@ package com.cuet.ghoorni.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Data
@@ -19,5 +20,6 @@ public class Files {
 
     @ManyToOne
     @JoinColumn(name = "uploaded_by", nullable = false)
+    @JsonIgnore
     private User uploadedBy;
 }
