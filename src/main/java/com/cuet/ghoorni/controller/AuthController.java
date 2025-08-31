@@ -62,15 +62,15 @@ public class AuthController {
         }
 
         try {
-            // Register user with email verification disabled initially
-            user.setEmailVerified(false);
+            // Email verification disabled - set to true by default
+            user.setEmailVerified(true);
             User registeredUser = authService.registerUser(user);
 
-            // Create verification token and send email
-            EmailVerificationToken token = emailVerificationService.createVerificationToken(registeredUser.getUserId());
-            emailService.sendVerificationEmail(registeredUser, token);
+            // Email verification disabled
+            // Email verification disabled
+            // emailService.sendVerificationEmail(registeredUser, token);
 
-            return new ResponseEntity<>("Registration successful! Please check your email to verify your account.",
+            return new ResponseEntity<>("Registration successful! You can now login to your account.",
                     HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
@@ -103,11 +103,11 @@ public class AuthController {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(userId, loginRequest.getPassword()));
 
-            // After successful authentication, check email verification
-            if (user.getEmailVerified() == null || !user.getEmailVerified()) {
-                System.out.println("Email not verified for user: " + userId);
-                return ResponseEntity.ok(new LoginResponse(null, true));
-            }
+            // Email verification check disabled
+            // if (user.getEmailVerified() == null || !user.getEmailVerified()) {
+            // System.out.println("Email not verified for user: " + userId);
+            // return ResponseEntity.ok(new LoginResponse(null, true));
+            // }
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(userId);
             String jwtToken = jwtUtil.generateToken(userDetails);
