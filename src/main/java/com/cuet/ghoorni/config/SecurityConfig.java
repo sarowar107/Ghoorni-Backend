@@ -83,7 +83,8 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173",
                 "http://localhost:5174",
-                "https://ghoorni.netlify.app"));
+                "https://ghoorni.netlify.app",
+                "https://ghoornifrontend.netlify.app"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
