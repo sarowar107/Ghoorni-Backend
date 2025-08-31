@@ -20,6 +20,9 @@ public class User {
     private String batch;
     private String role; // e.g., "student", "cr", "teacher", "admin"
 
+    @Column(columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean emailVerified = false;
+
     @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<Notice> notices;

@@ -1,8 +1,11 @@
 package com.cuet.ghoorni.controller;
 
 import com.cuet.ghoorni.model.User;
+import com.cuet.ghoorni.model.EmailVerificationToken;
 import com.cuet.ghoorni.payload.LoginRequest;
 import com.cuet.ghoorni.service.AuthService;
+import com.cuet.ghoorni.service.EmailVerificationService;
+import com.cuet.ghoorni.service.EmailService;
 import com.cuet.ghoorni.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,12 +20,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174" })
 public class AuthController {
 
     @Autowired
@@ -36,6 +40,12 @@ public class AuthController {
 
     @Autowired
     private UserDetailsService userDetailsService;
+
+    @Autowired
+    private EmailVerificationService emailVerificationService;
+
+    @Autowired
+    private EmailService emailService;
 
     @GetMapping("/validate")
     public ResponseEntity<?> validateToken(@AuthenticationPrincipal UserDetails userDetails) {
@@ -52,11 +62,21 @@ public class AuthController {
         }
 
         try {
-            authService.registerUser(user);
-            return new ResponseEntity<>("User registered successfully!", HttpStatus.CREATED);
+            // Register user with email verification disabled initially
+            user.setEmailVerified(false);
+            User registeredUser = authService.registerUser(user);
+
+            // Create verification token and send email
+            EmailVerificationToken token = emailVerificationService.createVerificationToken(registeredUser.getUserId());
+            emailService.sendVerificationEmail(registeredUser, token);
+
+            return new ResponseEntity<>("Registration successful! Please check your email to verify your account.",
+                    HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
+            System.err.println("Registration error: " + e.getMessage());
+            e.printStackTrace();
             return new ResponseEntity<>("An error occurred during registration. Please try again.",
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -76,6 +96,14 @@ public class AuthController {
             }
 
             System.out.println("Found user: " + user.getName() + ", UserId: " + user.getUserId());
+
+            // Check if email is verified
+            if (user.getEmailVerified() == null || !user.getEmailVerified()) {
+                System.out.println("Email not verified for user: " + userId);
+                return new ResponseEntity<>(
+                        "Email not verified. Please check your email and verify your account before logging in.",
+                        HttpStatus.FORBIDDEN);
+            }
 
             @SuppressWarnings("unused")
             Authentication authentication = authenticationManager.authenticate(
@@ -118,6 +146,7 @@ public class AuthController {
             cleanUser.setDeptName(user.getDeptName());
             cleanUser.setBatch(user.getBatch());
             cleanUser.setRole(user.getRole());
+            cleanUser.setEmailVerified(user.getEmailVerified());
             // Don't include password
             cleanUser.setPassword(null);
 
@@ -125,6 +154,91 @@ public class AuthController {
         } else {
             System.out.println("/me endpoint: User not found in database for userId: " + userId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<String> verifyEmail(@RequestParam String token) {
+        try {
+            boolean isVerified = emailVerificationService.verifyEmail(token);
+
+            if (isVerified) {
+                return new ResponseEntity<>("Email verified successfully! You can now log in to your account.",
+                        HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>("Invalid or expired verification token.", HttpStatus.BAD_REQUEST);
+            }
+        } catch (Exception e) {
+            System.err.println("Email verification error: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>("An error occurred during email verification.",
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<String> resendVerificationEmail(@RequestParam String userId) {
+        try {
+            boolean isSent = emailVerificationService.resendVerificationEmail(userId);
+
+            if (isSent) {
+                return new ResponseEntity<>("Verification email sent successfully! Please check your email.",
+                        HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(
+                        "Unable to send verification email. User not found or email already verified.",
+                        HttpStatus.BAD_REQUEST);
+            }
+        } catch (Exception e) {
+            System.err.println("Resend verification email error: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>("An error occurred while sending verification email.",
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/verification-status")
+    public ResponseEntity<?> getVerificationStatus(@RequestParam String userId) {
+        try {
+            User user = authService.getUserByUserId(userId);
+            if (user == null) {
+                return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+            }
+
+            boolean isVerified = user.getEmailVerified() != null && user.getEmailVerified();
+            return ResponseEntity.ok().body(new VerificationStatusResponse(user.getEmail(), isVerified));
+        } catch (Exception e) {
+            System.err.println("Get verification status error: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>("An error occurred while checking verification status.",
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Inner class for verification status response
+    public static class VerificationStatusResponse {
+        private String email;
+        private boolean verified;
+
+        public VerificationStatusResponse(String email, boolean verified) {
+            this.email = email;
+            this.verified = verified;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public boolean isVerified() {
+            return verified;
+        }
+
+        public void setVerified(boolean verified) {
+            this.verified = verified;
         }
     }
 }

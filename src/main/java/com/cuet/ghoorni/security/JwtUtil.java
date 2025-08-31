@@ -13,8 +13,9 @@ import java.util.Map;
 @Component
 public class JwtUtil {
 
-    // Use a fixed secret key instead of generating a new one on each server start
-    private final String SECRET_KEY = "ghoorni_secure_jwt_key_for_application_must_be_at_least_32_chars_long";
+    // Use environment variable for JWT secret key for security
+    private final String SECRET_KEY = System.getenv("JWT_SECRET") != null ? System.getenv("JWT_SECRET")
+            : "ghoorni_secure_jwt_key_for_application_must_be_at_least_32_chars_long";
     private final Key key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
 
     public String generateToken(UserDetails userDetails) {
