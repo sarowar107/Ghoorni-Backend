@@ -34,9 +34,10 @@ public class EmailService {
         System.out.println("Host: " + mailHost);
         System.out.println("Port: " + mailPort);
         System.out.println("Username: " + mailUsername);
-        MimeMessage mimeMessage = mailSender.createMimeMessage();
-        MimeMessageHelper helper;
+
         try {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper;
             helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
             helper.setFrom("ghoorni.cuet@gmail.com");
             helper.setTo(user.getEmail());
