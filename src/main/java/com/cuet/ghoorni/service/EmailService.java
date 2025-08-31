@@ -19,7 +19,21 @@ public class EmailService {
     @Value("${app.base-url}")
     private String baseUrl;
 
+    @Value("${spring.mail.host}")
+    private String mailHost;
+
+    @Value("${spring.mail.username}")
+    private String mailUsername;
+
+    @Value("${spring.mail.port}")
+    private String mailPort;
+
     public void sendVerificationEmail(User user, EmailVerificationToken token) {
+        // Debug log the mail configuration
+        System.out.println("Mail Configuration:");
+        System.out.println("Host: " + mailHost);
+        System.out.println("Port: " + mailPort);
+        System.out.println("Username: " + mailUsername);
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper;
         try {
@@ -30,67 +44,76 @@ public class EmailService {
 
             String verificationUrl = baseUrl + "/verify-email?token=" + token.getToken();
 
-           String emailBody = String.format(
-        "<!DOCTYPE html>" +
-        "<html xmlns=\"http://www.w3.org/1999/xhtml\">" +
-        "<head>" +
-        "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />" +
-        "    <title>Email Verification</title>" +
-        "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>" +
-        "    <style>" +
-        "        body { margin: 0; padding: 0; background-color: #f4f6f8; font-family: Arial, sans-serif; }" +
-        "        .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }" +
-        "        .header { background: linear-gradient(90deg,#2c3e50,#34495e); padding: 25px; text-align: center; }" +
-        "        .header h1 { margin: 0; color: #fff; font-size: 26px; font-weight: bold; }" +
-        "        .content { padding: 35px 30px; color: #333; }" +
-        "        .content h2 { color: #2c3e50; margin-top: 0; font-size: 22px; }" +
-        "        .content p { font-size: 15px; line-height: 1.6; margin: 12px 0; }" +
-        "        .button-container { text-align: center; margin: 35px 0; }" +
-        "        .button { " +
-        "            background: linear-gradient(90deg, #3498db, #2980b9); " +
-        "            color: #ffffff; " +
-        "            padding: 14px 40px; " +
-        "            font-size: 16px; " +
-        "            font-weight: bold; " +
-        "            text-decoration: none; " +
-        "            border-radius: 50px; " +
-        "            display: inline-block; " +
-        "            box-shadow: 0 4px 12px rgba(0,0,0,0.15); " +
-        "        }" +
-        "        .footer { background: #ecf0f1; padding: 20px; text-align: center; font-size: 13px; color: #7f8c8d; }" +
-        "    </style>" +
-        "</head>" +
-        "<body>" +
-        "    <div class=\"container\">" +
-        "        <div class=\"header\">" +
-        "            <h1>ghoorni</h1>" +
-        "        </div>" +
-        "        <div class=\"content\">" +
-        "            <h2>Welcome, %s!</h2>" +
-        "            <p>Thanks for joining <strong>ghoorni - CUET Student Portal</strong>. To complete your registration, please verify your email address by clicking the button below:</p>" +
-        "            <div class=\"button-container\">" +
-        "                <a href=\"%s\" class=\"button\">Verify My Email</a>" +
-        "            </div>" +
-        "            <p><strong>Note:</strong> This link will expire in <strong>24 hours</strong> for security purposes.</p>" +
-        "            <p>If you did not create this account, you can safely ignore this email.</p>" +
-        "            <p>Best regards,<br/>" +
-        "            <strong>The ghoorni Team</strong><br/>CUET Student Portal</p>" +
-        "        </div>" +
-        "        <div class=\"footer\">" +
-        "            &copy; 2025 ghoorni. All rights reserved." +
-        "        </div>" +
-        "    </div>" +
-        "</body>" +
-        "</html>",
-        user.getName(),
-        verificationUrl);
-
+            String emailBody = String.format(
+                    "<!DOCTYPE html>" +
+                            "<html xmlns=\"http://www.w3.org/1999/xhtml\">" +
+                            "<head>" +
+                            "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />" +
+                            "    <title>Email Verification</title>" +
+                            "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>" +
+                            "    <style>" +
+                            "        body { margin: 0; padding: 0; background-color: #f4f6f8; font-family: Arial, sans-serif; }"
+                            +
+                            "        .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }"
+                            +
+                            "        .header { background: linear-gradient(90deg,#2c3e50,#34495e); padding: 25px; text-align: center; }"
+                            +
+                            "        .header h1 { margin: 0; color: #fff; font-size: 26px; font-weight: bold; }" +
+                            "        .content { padding: 35px 30px; color: #333; }" +
+                            "        .content h2 { color: #2c3e50; margin-top: 0; font-size: 22px; }" +
+                            "        .content p { font-size: 15px; line-height: 1.6; margin: 12px 0; }" +
+                            "        .button-container { text-align: center; margin: 35px 0; }" +
+                            "        .button { " +
+                            "            background: linear-gradient(90deg, #3498db, #2980b9); " +
+                            "            color: #ffffff; " +
+                            "            padding: 14px 40px; " +
+                            "            font-size: 16px; " +
+                            "            font-weight: bold; " +
+                            "            text-decoration: none; " +
+                            "            border-radius: 50px; " +
+                            "            display: inline-block; " +
+                            "            box-shadow: 0 4px 12px rgba(0,0,0,0.15); " +
+                            "        }" +
+                            "        .footer { background: #ecf0f1; padding: 20px; text-align: center; font-size: 13px; color: #7f8c8d; }"
+                            +
+                            "    </style>" +
+                            "</head>" +
+                            "<body>" +
+                            "    <div class=\"container\">" +
+                            "        <div class=\"header\">" +
+                            "            <h1>ghoorni</h1>" +
+                            "        </div>" +
+                            "        <div class=\"content\">" +
+                            "            <h2>Welcome, %s!</h2>" +
+                            "            <p>Thanks for joining <strong>ghoorni - CUET Student Portal</strong>. To complete your registration, please verify your email address by clicking the button below:</p>"
+                            +
+                            "            <div class=\"button-container\">" +
+                            "                <a href=\"%s\" class=\"button\">Verify My Email</a>" +
+                            "            </div>" +
+                            "            <p><strong>Note:</strong> This link will expire in <strong>24 hours</strong> for security purposes.</p>"
+                            +
+                            "            <p>If you did not create this account, you can safely ignore this email.</p>" +
+                            "            <p>Best regards,<br/>" +
+                            "            <strong>The ghoorni Team</strong><br/>CUET Student Portal</p>" +
+                            "        </div>" +
+                            "        <div class=\"footer\">" +
+                            "            &copy; 2025 ghoorni. All rights reserved." +
+                            "        </div>" +
+                            "    </div>" +
+                            "</body>" +
+                            "</html>",
+                    user.getName(),
+                    verificationUrl);
 
             helper.setText(emailBody, true); // true flag indicates this is HTML
             mailSender.send(mimeMessage);
             System.out.println("Verification email sent successfully to: " + user.getEmail());
         } catch (MessagingException e) {
             System.err.println("Failed to send verification email to: " + user.getEmail());
+            System.err.println("Error details: " + e.getMessage());
+            if (e.getCause() != null) {
+                System.err.println("Root cause: " + e.getCause().getMessage());
+            }
             e.printStackTrace();
             // Don't throw exception - log the error but continue with signup process
             System.err.println("Email sending failed, but user registration will continue");
