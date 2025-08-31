@@ -5,6 +5,7 @@ import com.cuet.ghoorni.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserService {
@@ -54,11 +55,26 @@ public class UserService {
     }
 
     /**
-     * Deletes a user account
+     * Deletes a user account and all associated data
      * 
      * @param userId User ID
      */
+    @Transactional
     public void deleteAccount(String userId) {
-        userRepository.deleteById(userId);
+        // Get the user first to ensure it exists
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        try {
+            // The user entity has cascade=ALL on its relationships, so this will
+            // automatically delete all associated entities:
+            // - Notices (cascade)
+            // - Files (cascade)
+            // - Questions (cascade)
+            // - Answers (cascade)
+            userRepository.delete(user);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete user account: " + e.getMessage());
+        }
     }
 }

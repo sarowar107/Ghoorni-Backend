@@ -83,7 +83,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> loginUser(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<LoginResponse> loginUser(@RequestBody LoginRequest loginRequest) {
         try {
             String userId = loginRequest.getUserId().trim();
             System.out.println("Login attempt for user: " + userId);
@@ -92,31 +92,32 @@ public class AuthController {
             User user = authService.getUserByUserId(userId);
             if (user == null) {
                 System.out.println("User not found: " + userId);
-                return new ResponseEntity<>("User not found", HttpStatus.UNAUTHORIZED);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new LoginResponse(null, false));
             }
 
             System.out.println("Found user: " + user.getName() + ", UserId: " + user.getUserId());
 
-            // Check if email is verified
-            if (user.getEmailVerified() == null || !user.getEmailVerified()) {
-                System.out.println("Email not verified for user: " + userId);
-                return new ResponseEntity<>(
-                        "Email not verified. Please check your email and verify your account before logging in.",
-                        HttpStatus.FORBIDDEN);
-            }
-
+            // Try to authenticate first
             @SuppressWarnings("unused")
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(userId, loginRequest.getPassword()));
+
+            // After successful authentication, check email verification
+            if (user.getEmailVerified() == null || !user.getEmailVerified()) {
+                System.out.println("Email not verified for user: " + userId);
+                return ResponseEntity.ok(new LoginResponse(null, true));
+            }
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(userId);
             String jwtToken = jwtUtil.generateToken(userDetails);
             System.out.println("JWT generated with subject: " + jwtUtil.extractUsername(jwtToken));
 
-            return ResponseEntity.ok(jwtToken);
+            return ResponseEntity.ok(new LoginResponse(jwtToken, false));
         } catch (Exception e) {
             System.out.println("Login error: " + e.getMessage());
-            return new ResponseEntity<>("Invalid credentials", HttpStatus.UNAUTHORIZED);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new LoginResponse(null, false));
         }
     }
 
@@ -212,6 +213,33 @@ public class AuthController {
             e.printStackTrace();
             return new ResponseEntity<>("An error occurred while checking verification status.",
                     HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Inner class for login response
+    public static class LoginResponse {
+        private String token;
+        private boolean needsEmailVerification;
+
+        public LoginResponse(String token, boolean needsEmailVerification) {
+            this.token = token;
+            this.needsEmailVerification = needsEmailVerification;
+        }
+
+        public String getToken() {
+            return token;
+        }
+
+        public void setToken(String token) {
+            this.token = token;
+        }
+
+        public boolean isNeedsEmailVerification() {
+            return needsEmailVerification;
+        }
+
+        public void setNeedsEmailVerification(boolean needsEmailVerification) {
+            this.needsEmailVerification = needsEmailVerification;
         }
     }
 
