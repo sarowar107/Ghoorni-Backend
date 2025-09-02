@@ -13,6 +13,8 @@ public class QuestionResponse {
     private String description;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String toDept;
+    private String toBatch;
     private UserInfo askedBy;
     private List<AnswerResponse> answers;
 
@@ -23,6 +25,8 @@ public class QuestionResponse {
         response.setDescription(question.getDescription());
         response.setCreatedAt(question.getCreatedAt());
         response.setUpdatedAt(question.getUpdatedAt());
+        response.setToDept(question.getToDept());
+        response.setToBatch(question.getToBatch());
 
         response.setAskedBy(new UserInfo(
                 question.getAskedBy().getUserId(),

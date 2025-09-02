@@ -1,7 +1,6 @@
 package com.cuet.ghoorni.controller;
 
 import com.cuet.ghoorni.model.User;
-import com.cuet.ghoorni.model.EmailVerificationToken;
 import com.cuet.ghoorni.payload.LoginRequest;
 import com.cuet.ghoorni.service.AuthService;
 import com.cuet.ghoorni.service.EmailVerificationService;
@@ -44,9 +43,6 @@ public class AuthController {
     @Autowired
     private EmailVerificationService emailVerificationService;
 
-    @Autowired
-    private EmailService emailService;
-
     @GetMapping("/validate")
     public ResponseEntity<?> validateToken(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails != null) {
@@ -62,13 +58,9 @@ public class AuthController {
         }
 
         try {
-            // Email verification disabled - set to true by default
-            user.setEmailVerified(true);
-            User registeredUser = authService.registerUser(user);
-
-            // Email verification disabled
-            // Email verification disabled
-            // emailService.sendVerificationEmail(registeredUser, token);
+            // Set email_verified to false by default - no email sent during signup
+            user.setEmailVerified(false);
+            authService.registerUser(user);
 
             return new ResponseEntity<>("Registration successful! You can now login to your account.",
                     HttpStatus.CREATED);
@@ -92,32 +84,36 @@ public class AuthController {
             User user = authService.getUserByUserId(userId);
             if (user == null) {
                 System.out.println("User not found: " + userId);
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new LoginResponse(null, false));
+                return ResponseEntity
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .body(new LoginResponse(null, false, "User not found. Please check your ID and try again."));
             }
 
             System.out.println("Found user: " + user.getName() + ", UserId: " + user.getUserId());
 
-            // Try to authenticate first
-            @SuppressWarnings("unused")
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(userId, loginRequest.getPassword()));
+            try {
+                // Try to authenticate first
+                @SuppressWarnings("unused")
+                Authentication authentication = authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(userId, loginRequest.getPassword()));
 
-            // Email verification check disabled
-            // if (user.getEmailVerified() == null || !user.getEmailVerified()) {
-            // System.out.println("Email not verified for user: " + userId);
-            // return ResponseEntity.ok(new LoginResponse(null, true));
-            // }
+                UserDetails userDetails = userDetailsService.loadUserByUsername(userId);
+                String jwtToken = jwtUtil.generateToken(userDetails);
+                System.out.println("JWT generated with subject: " + jwtUtil.extractUsername(jwtToken));
 
-            UserDetails userDetails = userDetailsService.loadUserByUsername(userId);
-            String jwtToken = jwtUtil.generateToken(userDetails);
-            System.out.println("JWT generated with subject: " + jwtUtil.extractUsername(jwtToken));
+                // Check email verification status but allow login regardless
+                boolean needsEmailVerification = user.getEmailVerified() == null || !user.getEmailVerified();
+                return ResponseEntity.ok(new LoginResponse(jwtToken, needsEmailVerification, null));
 
-            return ResponseEntity.ok(new LoginResponse(jwtToken, false));
+            } catch (Exception e) {
+                System.out.println("Invalid credentials for user: " + userId);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new LoginResponse(null, false, "Invalid password. Please try again."));
+            }
         } catch (Exception e) {
             System.out.println("Login error: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new LoginResponse(null, false));
+                    .body(new LoginResponse(null, false, "An error occurred during login. Please try again."));
         }
     }
 
@@ -138,7 +134,7 @@ public class AuthController {
 
         if (user != null) {
             System.out.println("/me endpoint: Found user: " + user.getName() + ", Role: " + user.getRole()
-                    + ", UserId: " + user.getUserId());
+                    + ", UserId: " + user.getUserId() + ", EmailVerified: " + user.getEmailVerified());
             // Create a clean response without circular references
             User cleanUser = new User();
             cleanUser.setUserId(user.getUserId());
@@ -151,6 +147,7 @@ public class AuthController {
             // Don't include password
             cleanUser.setPassword(null);
 
+            System.out.println("/me endpoint: Returning user with EmailVerified: " + cleanUser.getEmailVerified());
             return ResponseEntity.ok(cleanUser);
         } else {
             System.out.println("/me endpoint: User not found in database for userId: " + userId);
@@ -220,10 +217,12 @@ public class AuthController {
     public static class LoginResponse {
         private String token;
         private boolean needsEmailVerification;
+        private String errorMessage;
 
-        public LoginResponse(String token, boolean needsEmailVerification) {
+        public LoginResponse(String token, boolean needsEmailVerification, String errorMessage) {
             this.token = token;
             this.needsEmailVerification = needsEmailVerification;
+            this.errorMessage = errorMessage;
         }
 
         public String getToken() {
@@ -240,6 +239,14 @@ public class AuthController {
 
         public void setNeedsEmailVerification(boolean needsEmailVerification) {
             this.needsEmailVerification = needsEmailVerification;
+        }
+
+        public String getErrorMessage() {
+            return errorMessage;
+        }
+
+        public void setErrorMessage(String errorMessage) {
+            this.errorMessage = errorMessage;
         }
     }
 

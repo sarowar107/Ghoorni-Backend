@@ -34,7 +34,8 @@ public class FileService {
         }
     }
 
-    public com.cuet.ghoorni.model.Files storeFile(MultipartFile file, String topic, boolean isPublic, String userId)
+    public com.cuet.ghoorni.model.Files storeFile(MultipartFile file, String topic, boolean isPublic, String userId,
+            String toDept, String toBatch)
             throws IOException {
         String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
         Path targetLocation = this.fileStorageLocation.resolve(fileName);
@@ -48,6 +49,19 @@ public class FileService {
         fileEntity.setUploadedBy(uploadedBy);
         fileEntity.setPublic(isPublic);
         fileEntity.setUploadedAt(LocalDateTime.now());
+
+        // Set department and batch based on user role
+        if ("teacher".equalsIgnoreCase(uploadedBy.getRole())) {
+            fileEntity.setToDept(uploadedBy.getDeptName());
+            fileEntity.setToBatch(toBatch); // Set from parameter for teachers
+        } else if ("cr".equalsIgnoreCase(uploadedBy.getRole()) || "student".equalsIgnoreCase(uploadedBy.getRole())) {
+            fileEntity.setToDept(uploadedBy.getDeptName());
+            fileEntity.setToBatch(uploadedBy.getBatch());
+        } else if ("admin".equalsIgnoreCase(uploadedBy.getRole())) {
+            // Admin can set both department and batch
+            fileEntity.setToDept(toDept != null ? toDept : "ALL");
+            fileEntity.setToBatch(toBatch != null ? toBatch : "1");
+        }
 
         return fileRepository.save(fileEntity);
     }
@@ -66,9 +80,39 @@ public class FileService {
         }
     }
 
-    // New method to get all file metadata
-    public List<com.cuet.ghoorni.model.Files> getAllFiles() {
-        return fileRepository.findAll();
+    // Get all files with filtering based on user's role and department/batch
+    public List<com.cuet.ghoorni.model.Files> getAllFiles(String userId) {
+        User currentUser = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<com.cuet.ghoorni.model.Files> allFiles = fileRepository.findAll();
+        
+        return allFiles.stream()
+                .filter(file -> {
+                    // File creator can always see their own files
+                    if (file.getUploadedBy().getUserId().equals(userId)) {
+                        return true;
+                    }
+                    
+                    // Admin can see all files
+                    if ("admin".equalsIgnoreCase(currentUser.getRole())) {
+                        return true;
+                    }
+                    
+                    // Public files are visible to everyone
+                    if (file.isPublic()) {
+                        return true;
+                    }
+                    
+                    // If file is targeted to specific department/batch
+                    boolean isDeptMatch = file.getToDept().equals("ALL") || 
+                                        file.getToDept().equals(currentUser.getDeptName());
+                    boolean isBatchMatch = file.getToBatch().equals("1") || 
+                                         file.getToBatch().equals(currentUser.getBatch());
+                    
+                    return isDeptMatch && isBatchMatch;
+                })
+                .toList();
     }
 
     public void deleteFile(Long fileId, String userId) throws IOException {

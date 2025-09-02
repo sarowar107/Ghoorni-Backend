@@ -1,9 +1,11 @@
 package com.cuet.ghoorni.controller;
 
 import com.cuet.ghoorni.model.Answer;
+import com.cuet.ghoorni.model.User;
 import com.cuet.ghoorni.payload.AnswerRequest;
 import com.cuet.ghoorni.payload.AnswerResponse;
 import com.cuet.ghoorni.service.AnswerService;
+import com.cuet.ghoorni.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,9 +21,21 @@ public class AnswerController {
     @Autowired
     private AnswerService answerService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @PostMapping("/submit")
-    public ResponseEntity<AnswerResponse> submitAnswer(@RequestBody AnswerRequest answerRequest,
+    public ResponseEntity<?> submitAnswer(@RequestBody AnswerRequest answerRequest,
             Authentication authentication) {
+        // Check if user's email is verified
+        User user = userRepository.findByUserId(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getEmailVerified() == null || !user.getEmailVerified()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Email verification required to answer questions");
+        }
+
         Answer newAnswer = answerService.submitAnswer(answerRequest, authentication.getName());
         return new ResponseEntity<>(AnswerResponse.fromEntity(newAnswer), HttpStatus.CREATED);
     }

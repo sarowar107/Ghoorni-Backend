@@ -12,6 +12,8 @@ public class NoticeResponse {
     private boolean isPublic;
     private LocalDateTime expiryTime;
     private LocalDateTime createdAt;
+    private String toDept;
+    private String toBatch;
     private UserInfo createdBy;
 
     @Data
@@ -39,6 +41,8 @@ public class NoticeResponse {
         response.setPublic(notice.isPublic());
         response.setExpiryTime(notice.getExpiryTime());
         response.setCreatedAt(notice.getCreatedAt());
+        response.setToDept(notice.getToDept());
+        response.setToBatch(notice.getToBatch());
 
         // Map only the necessary user information
         response.setCreatedBy(new UserInfo(

@@ -11,8 +11,10 @@ import java.time.LocalDateTime;
 public class Answer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ans_id")
     private Long ansId;
 
+    @Column(name = "content")
     private String content;
 
     @ManyToOne
@@ -24,6 +26,9 @@ public class Answer {
     @JoinColumn(name = "answered_by", nullable = false)
     private User answeredBy;
 
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }

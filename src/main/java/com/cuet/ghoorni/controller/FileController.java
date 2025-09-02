@@ -1,8 +1,10 @@
 package com.cuet.ghoorni.controller;
 
 import com.cuet.ghoorni.model.Files;
+import com.cuet.ghoorni.model.User;
 import com.cuet.ghoorni.payload.FileResponse;
 import com.cuet.ghoorni.service.FileService;
+import com.cuet.ghoorni.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -23,6 +25,9 @@ public class FileController {
     @Autowired
     private FileService fileService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @DeleteMapping("/{fileId}")
     public ResponseEntity<?> deleteFile(@PathVariable Long fileId, Authentication authentication) {
         if (authentication == null) {
@@ -41,11 +46,24 @@ public class FileController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<FileResponse> uploadFile(@RequestParam("file") MultipartFile file,
+    public ResponseEntity<?> uploadFile(
+            @RequestParam("file") MultipartFile file,
             @RequestParam("topic") String topic,
             @RequestParam("isPublic") boolean isPublic,
+            @RequestParam(value = "toDept", required = false) String toDept,
+            @RequestParam(value = "toBatch", required = false) String toBatch,
             Authentication authentication) throws IOException {
-        Files newFile = fileService.storeFile(file, topic, isPublic, authentication.getName());
+
+        // Check if user's email is verified
+        User user = userRepository.findByUserId(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getEmailVerified() == null || !user.getEmailVerified()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Email verification required to upload files");
+        }
+
+        Files newFile = fileService.storeFile(file, topic, isPublic, authentication.getName(), toDept, toBatch);
         return new ResponseEntity<>(FileResponse.fromEntity(newFile), HttpStatus.CREATED);
     }
 
@@ -57,10 +75,13 @@ public class FileController {
                 .body(file);
     }
 
-    // New method to view all files
+    // Get all files with filtering
     @GetMapping
-    public ResponseEntity<List<FileResponse>> getAllFiles() {
-        List<Files> files = fileService.getAllFiles();
+    public ResponseEntity<List<FileResponse>> getAllFiles(Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        List<Files> files = fileService.getAllFiles(authentication.getName());
         List<FileResponse> responses = files.stream()
                 .map(FileResponse::fromEntity)
                 .collect(Collectors.toList());

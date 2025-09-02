@@ -1,8 +1,10 @@
 package com.cuet.ghoorni.controller;
 
 import com.cuet.ghoorni.model.Notice;
+import com.cuet.ghoorni.model.User;
 import com.cuet.ghoorni.payload.NoticeResponse;
 import com.cuet.ghoorni.service.NoticeService;
+import com.cuet.ghoorni.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,15 +27,29 @@ public class NoticeController {
     @Autowired
     private NoticeService noticeService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @PostMapping("/create")
-    public ResponseEntity<Notice> createNotice(@RequestBody Notice notice, Authentication authentication) {
+    public ResponseEntity<?> createNotice(@RequestBody Notice notice, Authentication authentication) {
+        // Check if user's email is verified
+        User user = userRepository.findByUserId(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getEmailVerified() == null || !user.getEmailVerified()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Email verification required to create notices");
+        }
+
         Notice newNotice = noticeService.createNotice(notice, authentication.getName());
         return new ResponseEntity<>(newNotice, HttpStatus.CREATED);
     }
 
     @GetMapping
-    public ResponseEntity<List<NoticeResponse>> getAllNotices() {
-        List<Notice> notices = noticeService.findAllNotices();
+    public ResponseEntity<List<NoticeResponse>> getAllNotices(Authentication authentication) {
+        User currentUser = userRepository.findByUserId(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        List<Notice> notices = noticeService.findAllNotices(currentUser);
         List<NoticeResponse> responses = notices.stream()
                 .map(NoticeResponse::fromEntity)
                 .toList();

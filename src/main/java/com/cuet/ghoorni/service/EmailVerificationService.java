@@ -58,11 +58,17 @@ public class EmailVerificationService {
         }
 
         User user = userOptional.get();
+        System.out.println(
+                "Before verification - User: " + user.getUserId() + ", EmailVerified: " + user.getEmailVerified());
+
         user.setEmailVerified(true);
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        System.out.println("After verification - User: " + savedUser.getUserId() + ", EmailVerified: "
+                + savedUser.getEmailVerified());
 
         // Delete the used token
         tokenRepository.delete(verificationToken);
+        System.out.println("Email verification token deleted for user: " + user.getUserId());
 
         // Send welcome email
         try {

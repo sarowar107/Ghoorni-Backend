@@ -11,6 +11,8 @@ public class FileResponse {
     private String content;
     private LocalDateTime uploadedAt;
     private boolean isPublic;
+    private String toDept;
+    private String toBatch;
     private UserInfo uploadedBy;
 
     public static FileResponse fromEntity(Files file) {
@@ -20,6 +22,8 @@ public class FileResponse {
         response.setContent(file.getContent());
         response.setUploadedAt(file.getUploadedAt());
         response.setPublic(file.isPublic());
+        response.setToDept(file.getToDept());
+        response.setToBatch(file.getToBatch());
 
         response.setUploadedBy(new UserInfo(
                 file.getUploadedBy().getUserId(),
