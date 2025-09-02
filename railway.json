@@ -6,9 +6,6 @@
   "deploy": {
     "numReplicas": 1,
     "sleepApplication": false,
-    "restartPolicyType": "on_failure",
-    "healthcheckPath": "/actuator/health",
-    "healthcheckTimeout": 60,
-    "startCommand": null
+    "restartPolicyType": "on_failure"
   }
 }
