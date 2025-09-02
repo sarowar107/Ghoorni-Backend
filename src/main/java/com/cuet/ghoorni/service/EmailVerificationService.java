@@ -25,6 +25,10 @@ public class EmailVerificationService {
     @Autowired
     private EmailService emailService;
 
+    // Map to track last email send time per user (in production, use Redis or
+    // database)
+    private final java.util.concurrent.ConcurrentHashMap<String, Long> lastEmailSentMap = new java.util.concurrent.ConcurrentHashMap<>();
+
     public EmailVerificationToken createVerificationToken(String userId) {
         // Delete any existing tokens for this user
         tokenRepository.deleteByUserId(userId);
@@ -92,9 +96,22 @@ public class EmailVerificationService {
             return false; // Email already verified
         }
 
+        // Rate limiting: prevent sending emails too frequently (within 30 seconds)
+        Long lastSentTime = lastEmailSentMap.get(userId);
+        long currentTime = System.currentTimeMillis();
+
+        if (lastSentTime != null && (currentTime - lastSentTime) < 30000) { // 30 seconds
+            System.out.println("Email send request blocked for user " + userId + " - too frequent");
+            return false; // Too frequent, block the request
+        }
+
         try {
             EmailVerificationToken token = createVerificationToken(userId);
             emailService.sendVerificationEmail(user, token);
+
+            // Update the last sent time
+            lastEmailSentMap.put(userId, currentTime);
+
             return true;
         } catch (Exception e) {
             System.err.println("Failed to resend verification email: " + e.getMessage());
@@ -113,5 +130,10 @@ public class EmailVerificationService {
     public void cleanupExpiredTokens() {
         tokenRepository.deleteExpiredTokens(LocalDateTime.now());
         System.out.println("Cleaned up expired email verification tokens at: " + LocalDateTime.now());
+
+        // Also cleanup old entries from rate limiting map (older than 1 hour)
+        long oneHourAgo = System.currentTimeMillis() - 3600000;
+        lastEmailSentMap.entrySet().removeIf(entry -> entry.getValue() < oneHourAgo);
+        System.out.println("Cleaned up old email rate limiting entries");
     }
 }
