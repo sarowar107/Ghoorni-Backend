@@ -32,6 +32,9 @@ public class Files {
     @Column(name = "to_batch")
     private String toBatch;
 
+    @Column(name = "category")
+    private String category;
+
     @ManyToOne
     @JoinColumn(name = "uploaded_by", nullable = false)
     @JsonIgnore

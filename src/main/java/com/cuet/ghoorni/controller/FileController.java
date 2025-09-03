@@ -49,6 +49,7 @@ public class FileController {
     public ResponseEntity<?> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam("topic") String topic,
+            @RequestParam("category") String category,
             @RequestParam("isPublic") boolean isPublic,
             @RequestParam(value = "toDept", required = false) String toDept,
             @RequestParam(value = "toBatch", required = false) String toBatch,
@@ -63,7 +64,8 @@ public class FileController {
                     .body("Email verification required to upload files");
         }
 
-        Files newFile = fileService.storeFile(file, topic, isPublic, authentication.getName(), toDept, toBatch);
+        Files newFile = fileService.storeFile(file, topic, category, isPublic, authentication.getName(), toDept,
+                toBatch);
         return new ResponseEntity<>(FileResponse.fromEntity(newFile), HttpStatus.CREATED);
     }
 

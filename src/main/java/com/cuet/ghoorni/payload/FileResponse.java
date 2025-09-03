@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public class FileResponse {
     private Long fileId;
     private String topic;
+    private String category;
     private String content;
     private LocalDateTime uploadedAt;
     private boolean isPublic;
@@ -19,6 +20,7 @@ public class FileResponse {
         FileResponse response = new FileResponse();
         response.setFileId(file.getFileId());
         response.setTopic(file.getTopic());
+        response.setCategory(file.getCategory());
         response.setContent(file.getContent());
         response.setUploadedAt(file.getUploadedAt());
         response.setPublic(file.isPublic());

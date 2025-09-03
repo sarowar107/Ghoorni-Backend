@@ -34,7 +34,8 @@ public class FileService {
         }
     }
 
-    public com.cuet.ghoorni.model.Files storeFile(MultipartFile file, String topic, boolean isPublic, String userId,
+    public com.cuet.ghoorni.model.Files storeFile(MultipartFile file, String topic, String category, boolean isPublic,
+            String userId,
             String toDept, String toBatch)
             throws IOException {
         String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
@@ -45,6 +46,7 @@ public class FileService {
 
         com.cuet.ghoorni.model.Files fileEntity = new com.cuet.ghoorni.model.Files();
         fileEntity.setTopic(topic);
+        fileEntity.setCategory(category);
         fileEntity.setContent(fileName); // Store just the file name/path
         fileEntity.setUploadedBy(uploadedBy);
         fileEntity.setPublic(isPublic);
@@ -86,30 +88,30 @@ public class FileService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<com.cuet.ghoorni.model.Files> allFiles = fileRepository.findAll();
-        
+
         return allFiles.stream()
                 .filter(file -> {
                     // File creator can always see their own files
                     if (file.getUploadedBy().getUserId().equals(userId)) {
                         return true;
                     }
-                    
+
                     // Admin can see all files
                     if ("admin".equalsIgnoreCase(currentUser.getRole())) {
                         return true;
                     }
-                    
+
                     // Public files are visible to everyone
                     if (file.isPublic()) {
                         return true;
                     }
-                    
+
                     // If file is targeted to specific department/batch
-                    boolean isDeptMatch = file.getToDept().equals("ALL") || 
-                                        file.getToDept().equals(currentUser.getDeptName());
-                    boolean isBatchMatch = file.getToBatch().equals("1") || 
-                                         file.getToBatch().equals(currentUser.getBatch());
-                    
+                    boolean isDeptMatch = file.getToDept().equals("ALL") ||
+                            file.getToDept().equals(currentUser.getDeptName());
+                    boolean isBatchMatch = file.getToBatch().equals("1") ||
+                            file.getToBatch().equals(currentUser.getBatch());
+
                     return isDeptMatch && isBatchMatch;
                 })
                 .toList();
