@@ -1,7 +1,9 @@
 package com.cuet.ghoorni.service;
 
 import com.cuet.ghoorni.model.Notice;
+import com.cuet.ghoorni.model.Notification;
 import com.cuet.ghoorni.model.User;
+import com.cuet.ghoorni.model.Notification;
 import com.cuet.ghoorni.repository.NoticeRepository;
 import com.cuet.ghoorni.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,9 @@ public class NoticeService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     public Notice createNotice(Notice notice, String userId) {
         User user = userRepository.findByUserId(userId).orElse(null);
@@ -37,7 +42,13 @@ public class NoticeService {
         } else if ("admin".equalsIgnoreCase(user.getRole())) {
             // toDept and toBatch will be set by the frontend
         }
-        return noticeRepository.save(notice);
+
+        Notice savedNotice = noticeRepository.save(notice);
+
+        // Create notifications for targeted users
+        createNoticeNotifications(savedNotice);
+
+        return savedNotice;
     }
 
     public List<Notice> findAllNotices(User user) {
@@ -86,6 +97,61 @@ public class NoticeService {
             throw new RuntimeException("You don't have permission to delete this notice");
         }
 
+        // Delete associated notifications before deleting the notice
+        notificationService.deleteNotificationsByReferenceId(id.toString(),
+                Notification.NotificationType.NOTICE_CREATED);
+
         noticeRepository.delete(notice);
+    }
+
+    private void createNoticeNotifications(Notice notice) {
+        try {
+            // Find all users who should receive this notice
+            List<User> targetUsers = findTargetUsersForNotice(notice);
+
+            for (User targetUser : targetUsers) {
+                // Don't notify the creator of their own notice
+                if (!targetUser.getUserId().equals(notice.getCreatedBy().getUserId())) {
+                    String title = "New Notice: " + notice.getTitle();
+                    String message = "A new notice has been posted by " + notice.getCreatedBy().getName();
+
+                    notificationService.createNotification(
+                            targetUser,
+                            title,
+                            message,
+                            Notification.NotificationType.NOTICE_CREATED,
+                            notice.getNoticeId().toString());
+                }
+            }
+        } catch (Exception e) {
+            // Log the error but don't fail the notice creation
+            System.err.println("Failed to create notice notifications: " + e.getMessage());
+        }
+    }
+
+    private List<User> findTargetUsersForNotice(Notice notice) {
+        List<User> targetUsers = new ArrayList<>();
+
+        // If notice is for ALL departments
+        if ("ALL".equals(notice.getToDept())) {
+            if ("1".equals(notice.getToBatch())) {
+                // All users
+                targetUsers = userRepository.findAll();
+            } else {
+                // All users in specific batch
+                targetUsers = userRepository.findByBatch(notice.getToBatch());
+            }
+        } else {
+            // Specific department
+            if ("1".equals(notice.getToBatch())) {
+                // All users in specific department
+                targetUsers = userRepository.findByDeptName(notice.getToDept());
+            } else {
+                // Users in specific department and batch
+                targetUsers = userRepository.findByDeptNameAndBatch(notice.getToDept(), notice.getToBatch());
+            }
+        }
+
+        return targetUsers;
     }
 }

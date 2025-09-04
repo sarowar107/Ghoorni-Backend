@@ -47,6 +47,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings("deprecation")
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService);
@@ -68,6 +69,12 @@ public class SecurityConfig {
                                                                                                // users can upload files
                         .requestMatchers("/api/user/**").authenticated() // Require authentication for user endpoints
                         .requestMatchers("/api/admin/**").authenticated() // Require authentication for admin endpoints
+                        .requestMatchers("/api/notifications/**").authenticated() // Require authentication for
+                                                                                  // notification endpoints
+                        .requestMatchers("/api/notices/**").authenticated() // Require authentication for notice
+                                                                            // endpoints
+                        .requestMatchers("/api/answers/**").authenticated() // Require authentication for answer
+                                                                            // endpoints
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 

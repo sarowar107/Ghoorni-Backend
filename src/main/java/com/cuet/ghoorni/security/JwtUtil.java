@@ -1,7 +1,7 @@
 package com.cuet.ghoorni.security;
 
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+
 import io.jsonwebtoken.security.Keys;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -47,12 +47,22 @@ public class JwtUtil {
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        try {
+            final String username = extractUsername(token);
+            return (username != null && username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        } catch (Exception e) {
+            System.err.println("Token validation failed: " + e.getMessage());
+            return false;
+        }
     }
 
     private Boolean isTokenExpired(String token) {
-        return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody().getExpiration()
-                .before(new Date());
+        try {
+            return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody().getExpiration()
+                    .before(new Date());
+        } catch (Exception e) {
+            System.err.println("Token expiration check failed: " + e.getMessage());
+            return true; // Consider expired if we can't parse it
+        }
     }
 }

@@ -1,8 +1,10 @@
 package com.cuet.ghoorni.service;
 
 import com.cuet.ghoorni.model.Answer;
+import com.cuet.ghoorni.model.Notification;
 import com.cuet.ghoorni.model.Question;
 import com.cuet.ghoorni.model.User;
+import com.cuet.ghoorni.model.Notification;
 import com.cuet.ghoorni.payload.AnswerRequest;
 import com.cuet.ghoorni.repository.AnswerRepository;
 import com.cuet.ghoorni.repository.QuestionRepository;
@@ -24,6 +26,9 @@ public class AnswerService {
     @Autowired
     private QuestionRepository questionRepository;
 
+    @Autowired
+    private NotificationService notificationService;
+
     public Answer submitAnswer(AnswerRequest answerRequest, String userId) {
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("User not found!"));
@@ -37,7 +42,12 @@ public class AnswerService {
         answer.setCreatedAt(LocalDateTime.now());
         answer.setUpdatedAt(LocalDateTime.now());
 
-        return answerRepository.save(answer);
+        Answer savedAnswer = answerRepository.save(answer);
+
+        // Create notification for the question author
+        createAnswerNotification(savedAnswer, question);
+
+        return savedAnswer;
     }
 
     public List<Answer> findAnswersByQuestionId(Long questionId) {
@@ -56,6 +66,33 @@ public class AnswerService {
             throw new RuntimeException("You don't have permission to delete this answer");
         }
 
+        // Delete associated notifications before deleting the answer
+        notificationService.deleteNotificationsByReferenceId(answerId.toString(),
+                Notification.NotificationType.QUESTION_ANSWERED);
+
         answerRepository.delete(answer);
+    }
+
+    private void createAnswerNotification(Answer answer, Question question) {
+        try {
+            User questionAuthor = question.getAskedBy();
+            User answerAuthor = answer.getAnsweredBy();
+
+            // Don't notify if the person is answering their own question
+            if (!questionAuthor.getUserId().equals(answerAuthor.getUserId())) {
+                String title = "New Answer to Your Question";
+                String message = answerAuthor.getName() + " has answered your question: " + question.getTitle();
+
+                notificationService.createNotification(
+                        questionAuthor,
+                        title,
+                        message,
+                        Notification.NotificationType.QUESTION_ANSWERED,
+                        answer.getAnsId().toString());
+            }
+        } catch (Exception e) {
+            // Log the error but don't fail the answer creation
+            System.err.println("Failed to create answer notification: " + e.getMessage());
+        }
     }
 }

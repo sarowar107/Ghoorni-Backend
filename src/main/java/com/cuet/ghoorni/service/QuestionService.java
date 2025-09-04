@@ -1,13 +1,16 @@
 package com.cuet.ghoorni.service;
 
+import com.cuet.ghoorni.model.Notification;
 import com.cuet.ghoorni.model.Question;
 import com.cuet.ghoorni.model.User;
+import com.cuet.ghoorni.model.Notification;
 import com.cuet.ghoorni.repository.QuestionRepository;
 import com.cuet.ghoorni.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,6 +21,9 @@ public class QuestionService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     public Question askQuestion(Question question, String userId) {
         User user = userRepository.findByUserId(userId).orElse(null);
@@ -43,7 +49,13 @@ public class QuestionService {
             question.setToDept(question.getToDept() != null ? question.getToDept() : "ALL");
             question.setToBatch(question.getToBatch() != null ? question.getToBatch() : "1");
         }
-        return questionRepository.save(question);
+
+        Question savedQuestion = questionRepository.save(question);
+
+        // Create notifications for targeted users
+        createQuestionNotifications(savedQuestion);
+
+        return savedQuestion;
     }
 
     public List<Question> findAllQuestions(String userId) {
@@ -92,6 +104,68 @@ public class QuestionService {
             throw new RuntimeException("You don't have permission to delete this question");
         }
 
+        // Delete associated notifications before deleting the question
+        notificationService.deleteNotificationsByReferenceId(questionId.toString(),
+                Notification.NotificationType.QUESTION_ASKED);
+
+        // Also delete notifications for answers to this question
+        List<Answer> answers = answerRepository.findByQuestionQuestionId(questionId);
+        for (Answer answer : answers) {
+            notificationService.deleteNotificationsByReferenceId(answer.getAnsId().toString(),
+                    Notification.NotificationType.QUESTION_ANSWERED);
+        }
+
         questionRepository.delete(question);
+    }
+
+    private void createQuestionNotifications(Question question) {
+        try {
+            // Find all users who should receive this question notification
+            List<User> targetUsers = findTargetUsersForQuestion(question);
+
+            for (User targetUser : targetUsers) {
+                // Don't notify the creator of their own question
+                if (!targetUser.getUserId().equals(question.getAskedBy().getUserId())) {
+                    String title = "New Question: " + question.getTitle();
+                    String message = "A new question has been asked by " + question.getAskedBy().getName();
+
+                    notificationService.createNotification(
+                            targetUser,
+                            title,
+                            message,
+                            Notification.NotificationType.QUESTION_ASKED,
+                            question.getQuestionId().toString());
+                }
+            }
+        } catch (Exception e) {
+            // Log the error but don't fail the question creation
+            System.err.println("Failed to create question notifications: " + e.getMessage());
+        }
+    }
+
+    private List<User> findTargetUsersForQuestion(Question question) {
+        List<User> targetUsers = new ArrayList<>();
+
+        // If question is for ALL departments
+        if ("ALL".equals(question.getToDept())) {
+            if ("1".equals(question.getToBatch())) {
+                // All users
+                targetUsers = userRepository.findAll();
+            } else {
+                // All users in specific batch
+                targetUsers = userRepository.findByBatch(question.getToBatch());
+            }
+        } else {
+            // Specific department
+            if ("1".equals(question.getToBatch())) {
+                // All users in specific department
+                targetUsers = userRepository.findByDeptName(question.getToDept());
+            } else {
+                // Users in specific department and batch
+                targetUsers = userRepository.findByDeptNameAndBatch(question.getToDept(), question.getToBatch());
+            }
+        }
+
+        return targetUsers;
     }
 }

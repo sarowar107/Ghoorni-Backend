@@ -4,7 +4,7 @@ import com.cuet.ghoorni.model.User;
 import com.cuet.ghoorni.payload.LoginRequest;
 import com.cuet.ghoorni.service.AuthService;
 import com.cuet.ghoorni.service.EmailVerificationService;
-import com.cuet.ghoorni.service.EmailService;
+
 import com.cuet.ghoorni.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

@@ -35,18 +35,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
-            userId = jwtUtil.extractUsername(jwt); // You need to add this method in JwtUtil
+            try {
+                userId = jwtUtil.extractUsername(jwt);
+            } catch (Exception e) {
+                System.err.println("Failed to extract username from JWT: " + e.getMessage());
+            }
         }
 
         if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userId);
+            try {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userId);
 
-            if (jwtUtil.validateToken(jwt, userDetails)) { // You need to add this method in JwtUtil
-                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                usernamePasswordAuthenticationToken
-                        .setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+                if (jwtUtil.validateToken(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    usernamePasswordAuthenticationToken
+                            .setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+                    System.out.println("Successfully authenticated user: " + userId);
+                } else {
+                    System.err.println("JWT token validation failed for user: " + userId);
+                }
+            } catch (Exception e) {
+                System.err.println("Authentication failed for user " + userId + ": " + e.getMessage());
             }
         }
         filterChain.doFilter(request, response);

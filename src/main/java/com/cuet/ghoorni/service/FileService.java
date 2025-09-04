@@ -1,5 +1,6 @@
 package com.cuet.ghoorni.service;
 
+import com.cuet.ghoorni.model.Notification;
 import com.cuet.ghoorni.model.User;
 import com.cuet.ghoorni.repository.FileRepository;
 import com.cuet.ghoorni.repository.UserRepository;
@@ -25,6 +26,9 @@ public class FileService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     public FileService() {
         try {
@@ -128,6 +132,10 @@ public class FileService {
         if (!file.getUploadedBy().getUserId().equals(userId) && !user.getRole().equals("admin")) {
             throw new RuntimeException("You don't have permission to delete this file");
         }
+
+        // Delete associated notifications before deleting the file
+        notificationService.deleteNotificationsByReferenceId(fileId.toString(),
+                Notification.NotificationType.FILE_UPLOADED);
 
         // Delete the physical file
         Path filePath = this.fileStorageLocation.resolve(file.getContent()).normalize();

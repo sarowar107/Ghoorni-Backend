@@ -2,8 +2,6 @@ package com.cuet.ghoorni.payload;
 
 import com.cuet.ghoorni.model.User;
 import lombok.Data;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Data
 public class UserResponse {
