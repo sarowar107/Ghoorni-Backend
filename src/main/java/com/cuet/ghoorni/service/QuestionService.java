@@ -1,9 +1,10 @@
 package com.cuet.ghoorni.service;
 
+import com.cuet.ghoorni.model.Answer;
 import com.cuet.ghoorni.model.Notification;
 import com.cuet.ghoorni.model.Question;
 import com.cuet.ghoorni.model.User;
-import com.cuet.ghoorni.model.Notification;
+import com.cuet.ghoorni.repository.AnswerRepository;
 import com.cuet.ghoorni.repository.QuestionRepository;
 import com.cuet.ghoorni.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ public class QuestionService {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private AnswerRepository answerRepository;
 
     public Question askQuestion(Question question, String userId) {
         User user = userRepository.findByUserId(userId).orElse(null);
