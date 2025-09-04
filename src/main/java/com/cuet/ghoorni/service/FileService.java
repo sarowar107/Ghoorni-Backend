@@ -75,11 +75,22 @@ public class FileService {
         com.cuet.ghoorni.model.Files fileEntity = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("File not found with id " + fileId));
 
-        // Return Google Drive download link if available, otherwise generate one
+        // Return Google Drive download link if available, otherwise try to generate one
         if (fileEntity.getDriveDownloadLink() != null && !fileEntity.getDriveDownloadLink().isEmpty()) {
             return fileEntity.getDriveDownloadLink();
         } else if (fileEntity.getDriveFileId() != null) {
-            return googleDriveService.getFileDownloadLink(fileEntity.getDriveFileId());
+            try {
+                // Check if Google Drive service is authenticated
+                if (googleDriveService.isAuthenticated()) {
+                    return googleDriveService.getFileDownloadLink(fileEntity.getDriveFileId());
+                } else {
+                    // Fallback: construct direct Google Drive download link
+                    return "https://drive.google.com/uc?export=download&id=" + fileEntity.getDriveFileId();
+                }
+            } catch (Exception e) {
+                // Fallback: construct direct Google Drive download link
+                return "https://drive.google.com/uc?export=download&id=" + fileEntity.getDriveFileId();
+            }
         } else {
             throw new RuntimeException("File not available for download");
         }
@@ -89,11 +100,22 @@ public class FileService {
         com.cuet.ghoorni.model.Files fileEntity = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("File not found with id " + fileId));
 
-        // Return Google Drive view link if available, otherwise generate one
+        // Return Google Drive view link if available, otherwise try to generate one
         if (fileEntity.getDriveViewLink() != null && !fileEntity.getDriveViewLink().isEmpty()) {
             return fileEntity.getDriveViewLink();
         } else if (fileEntity.getDriveFileId() != null) {
-            return googleDriveService.getFileViewLink(fileEntity.getDriveFileId());
+            try {
+                // Check if Google Drive service is authenticated
+                if (googleDriveService.isAuthenticated()) {
+                    return googleDriveService.getFileViewLink(fileEntity.getDriveFileId());
+                } else {
+                    // Fallback: construct direct Google Drive view link
+                    return "https://drive.google.com/file/d/" + fileEntity.getDriveFileId() + "/view";
+                }
+            } catch (Exception e) {
+                // Fallback: construct direct Google Drive view link
+                return "https://drive.google.com/file/d/" + fileEntity.getDriveFileId() + "/view";
+            }
         } else {
             throw new RuntimeException("File not available for viewing");
         }

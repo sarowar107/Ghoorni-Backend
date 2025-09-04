@@ -133,20 +133,24 @@ public class GoogleDriveService {
     }
 
     public String getAuthorizationUrl() throws IOException {
-        if (flow == null) {
-            flow = new GoogleAuthorizationCodeFlow.Builder(
-                    httpTransport,
-                    jsonFactory,
-                    googleClientSecrets,
-                    Collections.singletonList(DriveScopes.DRIVE_FILE))
-                    .setDataStoreFactory(new MemoryDataStoreFactory())
-                    .setAccessType("offline")
-                    .build();
-        }
+        try {
+            if (flow == null) {
+                flow = new GoogleAuthorizationCodeFlow.Builder(
+                        httpTransport,
+                        jsonFactory,
+                        googleClientSecrets,
+                        Collections.singletonList(DriveScopes.DRIVE_FILE))
+                        .setDataStoreFactory(new MemoryDataStoreFactory())
+                        .setAccessType("offline")
+                        .build();
+            }
 
-        return flow.newAuthorizationUrl()
-                .setRedirectUri(googleDriveConfig.getRedirectUri())
-                .build();
+            return flow.newAuthorizationUrl()
+                    .setRedirectUri(googleDriveConfig.getRedirectUri())
+                    .build();
+        } catch (Exception e) {
+            throw new IOException("Error generating authorization URL: " + e.getMessage(), e);
+        }
     }
 
     public void handleAuthorizationCallback(String code) throws IOException {
