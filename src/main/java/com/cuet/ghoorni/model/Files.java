@@ -18,7 +18,25 @@ public class Files {
     private String topic;
 
     @Column(name = "content")
-    private String content; // Assuming file path or some identifier
+    private String content; // Google Drive file ID or local file path
+
+    @Column(name = "original_filename")
+    private String originalFilename; // Store the original filename
+
+    @Column(name = "file_size")
+    private Long fileSize; // File size in bytes
+
+    @Column(name = "mime_type")
+    private String mimeType; // File MIME type
+
+    @Column(name = "drive_file_id")
+    private String driveFileId; // Google Drive file ID
+
+    @Column(name = "drive_view_link")
+    private String driveViewLink; // Google Drive view link
+
+    @Column(name = "drive_download_link")
+    private String driveDownloadLink; // Google Drive download link
 
     @Column(name = "uploaded_at")
     private LocalDateTime uploadedAt;

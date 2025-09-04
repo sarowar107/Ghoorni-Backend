@@ -62,6 +62,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/auth/google/**").permitAll() // Allow Google OAuth endpoints
                         .requestMatchers(HttpMethod.GET, "/api/questions/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll() // Static resource path for uploaded files

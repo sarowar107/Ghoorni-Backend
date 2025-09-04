@@ -1,0 +1,59 @@
+# Docker ignore file for Ghoorni Backend
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+README*
+SETUP_INSTRUCTIONS*
+GOOGLE_*
+INTEGRATION_*
+RAILWAY_*
+
+# IDE
+.vscode
+.idea
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Maven
+target/
+!target/*.jar
+.mvn/wrapper/maven-wrapper.jar
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Test files
+src/test/
+
+# Local configuration
+application-local.properties
+application-dev.properties
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Railway
+railway.json
+
+# Render
+render.yaml
+
+# Uploads (will be mounted as volume)
+resources/uploads/*
+src/main/resources/uploads/*

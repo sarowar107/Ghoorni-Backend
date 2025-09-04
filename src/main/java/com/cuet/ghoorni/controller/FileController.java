@@ -6,7 +6,6 @@ import com.cuet.ghoorni.payload.FileResponse;
 import com.cuet.ghoorni.service.FileService;
 import com.cuet.ghoorni.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +18,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/files")
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174" })
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174", "https://ghoorni.netlify.app" })
 public class FileController {
 
     @Autowired
@@ -53,28 +52,62 @@ public class FileController {
             @RequestParam("isPublic") boolean isPublic,
             @RequestParam(value = "toDept", required = false) String toDept,
             @RequestParam(value = "toBatch", required = false) String toBatch,
-            Authentication authentication) throws IOException {
+            Authentication authentication) {
 
-        // Check if user's email is verified
-        User user = userRepository.findByUserId(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        try {
+            // Check if user's email is verified
+            User user = userRepository.findByUserId(authentication.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user.getEmailVerified() == null || !user.getEmailVerified()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Email verification required to upload files");
+            if (user.getEmailVerified() == null || !user.getEmailVerified()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Email verification required to upload files");
+            }
+
+            Files newFile = fileService.storeFile(file, topic, category, isPublic, authentication.getName(), toDept,
+                    toBatch);
+            return new ResponseEntity<>(FileResponse.fromEntity(newFile), HttpStatus.CREATED);
+        } catch (IOException e) {
+            // Check if it's a Google Drive authentication error
+            if (e.getMessage().contains("Google Drive authentication required")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Google Drive authentication required. Please complete OAuth authorization first by visiting /auth/google/authorize");
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error uploading file: " + e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Unexpected error: " + e.getMessage());
         }
-
-        Files newFile = fileService.storeFile(file, topic, category, isPublic, authentication.getName(), toDept,
-                toBatch);
-        return new ResponseEntity<>(FileResponse.fromEntity(newFile), HttpStatus.CREATED);
     }
 
     @GetMapping("/download/{fileId}")
-    public ResponseEntity<Resource> downloadFile(@PathVariable Long fileId) throws IOException {
-        Resource file = fileService.loadFileAsResource(fileId);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"")
-                .body(file);
+    public ResponseEntity<?> downloadFile(@PathVariable Long fileId) throws IOException {
+        try {
+            String downloadLink = fileService.getFileDownloadLink(fileId);
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, downloadLink)
+                    .build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("File not found: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/view/{fileId}")
+    public ResponseEntity<?> viewFile(@PathVariable Long fileId) throws IOException {
+        try {
+            String viewLink = fileService.getFileViewLink(fileId);
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, viewLink)
+                    .build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("File not found: " + e.getMessage());
+        }
     }
 
     // Get all files with filtering

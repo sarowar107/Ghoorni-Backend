@@ -10,6 +10,12 @@ public class FileResponse {
     private String topic;
     private String category;
     private String content;
+    private String originalFilename;
+    private Long fileSize;
+    private String mimeType;
+    private String driveFileId;
+    private String driveViewLink;
+    private String driveDownloadLink;
     private LocalDateTime uploadedAt;
     private boolean isPublic;
     private String toDept;
@@ -22,6 +28,12 @@ public class FileResponse {
         response.setTopic(file.getTopic());
         response.setCategory(file.getCategory());
         response.setContent(file.getContent());
+        response.setOriginalFilename(file.getOriginalFilename());
+        response.setFileSize(file.getFileSize());
+        response.setMimeType(file.getMimeType());
+        response.setDriveFileId(file.getDriveFileId());
+        response.setDriveViewLink(file.getDriveViewLink());
+        response.setDriveDownloadLink(file.getDriveDownloadLink());
         response.setUploadedAt(file.getUploadedAt());
         response.setPublic(file.isPublic());
         response.setToDept(file.getToDept());

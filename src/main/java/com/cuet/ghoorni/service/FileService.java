@@ -4,22 +4,16 @@ import com.cuet.ghoorni.model.Notification;
 import com.cuet.ghoorni.model.User;
 import com.cuet.ghoorni.repository.FileRepository;
 import com.cuet.ghoorni.repository.UserRepository;
+import com.google.api.services.drive.model.File;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
-import java.util.List; // Import the List class
+import java.util.List;
 
 @Service
 public class FileService {
-
-    private final Path fileStorageLocation = Paths.get("src/main/resources/uploads").toAbsolutePath().normalize();
 
     @Autowired
     private FileRepository fileRepository;
@@ -30,28 +24,33 @@ public class FileService {
     @Autowired
     private NotificationService notificationService;
 
-    public FileService() {
-        try {
-            java.nio.file.Files.createDirectories(this.fileStorageLocation);
-        } catch (Exception ex) {
-            throw new RuntimeException("Could not create the directory where the uploaded files will be stored.", ex);
-        }
-    }
+    @Autowired
+    private GoogleDriveService googleDriveService;
 
     public com.cuet.ghoorni.model.Files storeFile(MultipartFile file, String topic, String category, boolean isPublic,
             String userId,
             String toDept, String toBatch)
             throws IOException {
         String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-        Path targetLocation = this.fileStorageLocation.resolve(fileName);
-        java.nio.file.Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+        // Upload to Google Drive
+        String driveFileId = googleDriveService.uploadFile(file, fileName);
+
+        // Get Google Drive file metadata
+        File driveFile = googleDriveService.getFileMetadata(driveFileId);
 
         User uploadedBy = userRepository.findByUserId(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
         com.cuet.ghoorni.model.Files fileEntity = new com.cuet.ghoorni.model.Files();
         fileEntity.setTopic(topic);
         fileEntity.setCategory(category);
-        fileEntity.setContent(fileName); // Store just the file name/path
+        fileEntity.setContent(fileName); // Keep for backward compatibility
+        fileEntity.setOriginalFilename(file.getOriginalFilename());
+        fileEntity.setFileSize(file.getSize());
+        fileEntity.setMimeType(file.getContentType());
+        fileEntity.setDriveFileId(driveFileId);
+        fileEntity.setDriveViewLink(driveFile.getWebViewLink());
+        fileEntity.setDriveDownloadLink(driveFile.getWebContentLink());
         fileEntity.setUploadedBy(uploadedBy);
         fileEntity.setPublic(isPublic);
         fileEntity.setUploadedAt(LocalDateTime.now());
@@ -72,17 +71,31 @@ public class FileService {
         return fileRepository.save(fileEntity);
     }
 
-    public Resource loadFileAsResource(Long fileId) throws IOException {
+    public String getFileDownloadLink(Long fileId) throws IOException {
         com.cuet.ghoorni.model.Files fileEntity = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("File not found with id " + fileId));
 
-        Path filePath = this.fileStorageLocation.resolve(fileEntity.getContent()).normalize();
-        Resource resource = new UrlResource(filePath.toUri());
-
-        if (resource.exists()) {
-            return resource;
+        // Return Google Drive download link if available, otherwise generate one
+        if (fileEntity.getDriveDownloadLink() != null && !fileEntity.getDriveDownloadLink().isEmpty()) {
+            return fileEntity.getDriveDownloadLink();
+        } else if (fileEntity.getDriveFileId() != null) {
+            return googleDriveService.getFileDownloadLink(fileEntity.getDriveFileId());
         } else {
-            throw new RuntimeException("File not found " + fileEntity.getContent());
+            throw new RuntimeException("File not available for download");
+        }
+    }
+
+    public String getFileViewLink(Long fileId) throws IOException {
+        com.cuet.ghoorni.model.Files fileEntity = fileRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("File not found with id " + fileId));
+
+        // Return Google Drive view link if available, otherwise generate one
+        if (fileEntity.getDriveViewLink() != null && !fileEntity.getDriveViewLink().isEmpty()) {
+            return fileEntity.getDriveViewLink();
+        } else if (fileEntity.getDriveFileId() != null) {
+            return googleDriveService.getFileViewLink(fileEntity.getDriveFileId());
+        } else {
+            throw new RuntimeException("File not available for viewing");
         }
     }
 
@@ -137,9 +150,10 @@ public class FileService {
         notificationService.deleteNotificationsByReferenceId(fileId.toString(),
                 Notification.NotificationType.FILE_UPLOADED);
 
-        // Delete the physical file
-        Path filePath = this.fileStorageLocation.resolve(file.getContent()).normalize();
-        java.nio.file.Files.deleteIfExists(filePath);
+        // Delete the file from Google Drive
+        if (file.getDriveFileId() != null && !file.getDriveFileId().isEmpty()) {
+            googleDriveService.deleteFile(file.getDriveFileId());
+        }
 
         // Delete the database record
         fileRepository.delete(file);
